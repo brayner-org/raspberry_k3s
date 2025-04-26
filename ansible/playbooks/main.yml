@@ -44,5 +44,5 @@
   roles:
     - { role: base, tags: deploy }
     - { role: k3s, tags: deploy }
-    - { role: home_assistant, tags: deploy }
+    - { role: home_assistant, tags: [deploy, deploy-homeassistant] }
     - { role: destroy, tags: destroy }

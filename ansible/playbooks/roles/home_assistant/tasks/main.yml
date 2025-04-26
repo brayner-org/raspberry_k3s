@@ -33,6 +33,7 @@
 - name: Append configuration block to configuration.yaml inside Home Assistant pod
   become: false
   shell: |
+    sleep 10
     cat /tmp/configuration_block.yaml | kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml exec -i -n home-assistant statefulset/home-assistant -- \
     sh -c 'cat >> /config/configuration.yaml'
   register: append_configuration
