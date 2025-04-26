@@ -1,0 +1,12 @@
+---
+
+- name: Upgrade OS
+  apt:
+    update_cache: yes
+    upgrade: dist
+    cache_valid_time: "{{ upgrade_cache_valid_time }}"
+
+- name: Install dependencies
+  apt:
+    name: curl
+    state: present

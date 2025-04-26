@@ -1,0 +1,4 @@
+.env
+**/ssh_keys/
+**/output/
+k3s.yaml

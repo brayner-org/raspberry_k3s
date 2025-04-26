@@ -1,0 +1,4 @@
+raspberry_ip: "{{ lookup('env', 'RASPBERRY_IP') }}"
+upgrade_cache_valid_time: 3600
+k3s_install_url: https://get.k3s.io
+home_assistant_image: "homeassistant/home-assistant:2025.4"

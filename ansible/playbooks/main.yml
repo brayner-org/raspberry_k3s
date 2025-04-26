@@ -1,0 +1,48 @@
+- name: Prepare Raspberry Pi and install k3s
+  hosts: raspberry
+  gather_facts: yes
+  become: true
+
+  pre_tasks:
+    - name: Create ssh_keys folder on control node
+      delegate_to: localhost
+      run_once: true
+      become: false
+      file:
+        path: "{{ playbook_dir }}/ssh_keys"
+        state: directory
+        mode: '0700'
+
+    - name: Read .env file content (control node)
+      delegate_to: localhost
+      run_once: true
+      become: false
+      set_fact:
+        env_content: "{{ lookup('file', playbook_dir ~ '/../../.env') }}"
+
+    - name: Extract PRIVATE_KEY_B64 from .env (control node)
+      delegate_to: localhost
+      run_once: true
+      become: false
+      set_fact:
+        private_key_b64: >-
+          {{ env_content.splitlines()
+             | select('match','^PRIVATE_KEY_B64=')
+             | map('regex_replace','^PRIVATE_KEY_B64=','')
+             | list
+             | first }}
+
+    - name: Write SSH private key to disk (control node)
+      delegate_to: localhost
+      run_once: true
+      become: false
+      copy:
+        content: "{{ private_key_b64 | b64decode }}"
+        dest: "{{ playbook_dir }}/ssh_keys/pi_key"
+        mode: '0600'
+
+  roles:
+    - { role: base, tags: deploy }
+    - { role: k3s, tags: deploy }
+    - { role: home_assistant, tags: deploy }
+    - { role: destroy, tags: destroy }

@@ -1,0 +1,14 @@
+---
+
+- name: Check if k3s-uninstall.sh exists
+  become: true
+  stat:
+    path: /usr/local/bin/k3s-uninstall.sh
+  register: k3s_uninstall_script
+  tags: destroy
+
+- name: Uninstall k3s from Raspberry Pi
+  become: true
+  shell: /usr/local/bin/k3s-uninstall.sh
+  when: k3s_uninstall_script.stat.exists
+  tags: destroy

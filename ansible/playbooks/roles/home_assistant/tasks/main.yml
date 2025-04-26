@@ -1,0 +1,44 @@
+---
+
+- name: Copy Home Assistant manifest to Raspberry Pi
+  become: false
+  copy:
+    src: "{{ role_path }}/files/home-assistant.yaml"
+    dest: /tmp/home-assistant.yaml
+    mode: '0644'
+
+- name: Apply Home Assistant manifests with variable substitution
+  become: false
+  shell: |
+    export HOME_ASSISTANT_IMAGE={{ home_assistant_image }} && \
+    envsubst < /tmp/home-assistant.yaml | kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml apply -f -
+  register: home_assistant_apply
+
+- name: Wait for Home Assistant StatefulSet to be ready
+  become: false
+  shell: |
+    kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml rollout status statefulset/home-assistant -n home-assistant
+  register: home_assistant_rollout
+  retries: 10
+  delay: 15
+  until: home_assistant_rollout.rc == 0
+
+- name: Copy Home Assistant configuration block to Raspberry Pi
+  become: false
+  copy:
+    src: "{{ role_path }}/files/configuration_block.yaml"
+    dest: /tmp/configuration_block.yaml
+    mode: '0644'
+
+- name: Append configuration block to configuration.yaml inside Home Assistant pod
+  become: false
+  shell: |
+    cat /tmp/configuration_block.yaml | kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml exec -i -n home-assistant statefulset/home-assistant -- \
+    sh -c 'cat >> /config/configuration.yaml'
+  register: append_configuration
+
+- name: Restart Home Assistant pod to reload configuration
+  become: false
+  shell: |
+    kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml rollout restart statefulset/home-assistant -n home-assistant
+  register: restart_home_assistant
