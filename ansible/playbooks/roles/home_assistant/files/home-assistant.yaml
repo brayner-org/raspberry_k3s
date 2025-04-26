@@ -1,0 +1,93 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: home-assistant
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+spec:
+  clusterIP: None
+  selector:
+    app: home-assistant
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+spec:
+  serviceName: home-assistant
+  replicas: 1
+  selector:
+    matchLabels:
+      app: home-assistant
+  template:
+    metadata:
+      labels:
+        app: home-assistant
+    spec:
+      containers:
+        - name: home-assistant
+          image: ${HOME_ASSISTANT_IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8123
+          env:
+            - name: TZ
+              value: "America/Recife"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+  volumeClaimTemplates:
+    - metadata:
+        name: config
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-assistant-lb
+  namespace: home-assistant
+spec:
+  type: ClusterIP
+  selector:
+    app: home-assistant
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: home-assistant
+  namespace: home-assistant
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  rules:
+    - host: homeassistant.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: home-assistant-lb
+                port:
+                  number: 8123

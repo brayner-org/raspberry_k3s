@@ -1,0 +1,149 @@
+---
+
+- name: Overwrite /boot/cmdline.txt for cgroup settings
+  become: true
+  copy:
+    dest: /boot/cmdline.txt
+    content: "cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory\n"
+    owner: root
+    group: root
+    mode: '0644'
+  register: cmdline_result
+
+- name: Reduce GPU memory allocation for headless operation
+  become: true
+  blockinfile:
+    path: /boot/firmware/config.txt
+    block: |
+      # Reduce GPU memory for k3s
+      gpu_mem=16
+    insertafter: EOF
+  register: gpu_mem_result
+
+- name: Comment out swap entries in /etc/fstab
+  become: true
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#]*\s+swap\s+.*)$'
+    replace: '#\1'
+  register: fstab_result
+
+- name: Disable swap on the machine
+  become: true
+  command: swapoff -a
+  register: swapoff_result
+
+- name: Install k3s
+  shell: |
+    sudo curl -sfL https://get.k3s.io \
+      | INSTALL_K3S_EXEC="--disable traefik" sh -s - --write-kubeconfig-mode 644
+  args:
+    creates: /usr/local/bin/k3s
+  register: k3s_install_result
+
+- name: Reboot the machine after k3s installation if needed
+  become: true
+  reboot:
+    reboot_timeout: 600
+  when: k3s_install_result.changed
+
+- name: Wait for k3s to be ready
+  wait_for:
+    host: "{{ inventory_hostname }}"
+    port: 6443
+    timeout: 300
+
+- name: Install Metrics Server on k3s
+  become: false
+  shell: |
+    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: metrics_server_result
+
+- name: Wait for Metrics Server deployment to be ready
+  become: false
+  shell: |
+    kubectl rollout status deployment/metrics-server -n kube-system
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  retries: 5
+  delay: 10
+  register: metrics_server_rollout
+  until: metrics_server_rollout.rc == 0
+
+- name: Install Helm
+  become: true
+  shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    creates: /usr/local/bin/helm
+
+- name: Deploy ingress-nginx using Helm
+  become: false
+  shell: |
+    helm upgrade --install ingress-nginx ingress-nginx \
+      --repo https://kubernetes.github.io/ingress-nginx \
+      --set controller.hostNetwork=true,controller.service.type=\"\",controller.kind=DaemonSet \
+      --namespace ingress-nginx --create-namespace
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: ingress_nginx_result
+
+- name: Wait for ingress-nginx controller to be ready
+  become: false
+  shell: |
+    kubectl rollout status daemonset ingress-nginx-controller -n ingress-nginx
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  retries: 10
+  delay: 15
+  register: ingress_nginx_rollout
+  until: ingress_nginx_rollout.rc == 0
+
+- name: Create local output directory for kubeconfig
+  delegate_to: localhost
+  become: false
+  file:
+    path: "{{ playbook_dir }}/../../output"
+    state: directory
+    mode: '0755'
+
+- name: Fetch kubeconfig from Raspberry Pi
+  become: false
+  fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ playbook_dir }}/../../output/k3s.yaml"
+    flat: yes
+
+- name: Update server IP in fetched kubeconfig
+  delegate_to: localhost
+  become: false
+  replace:
+    path: "{{ playbook_dir }}/../../output/k3s.yaml"
+    regexp: 'server: https://127.0.0.1:6443'
+    replace: "server: https://{{ lookup('env', 'RASPBERRY_IP') }}:6443"
+
+- name: Change default cluster name
+  delegate_to: localhost
+  become: false
+  replace:
+    path: "{{ playbook_dir }}/../../output/k3s.yaml"
+    regexp: 'name: default'
+    replace: "name: raspberrypi"
+
+- name: Change default cluster name from context
+  delegate_to: localhost
+  become: false
+  replace:
+    path: "{{ playbook_dir }}/../../output/k3s.yaml"
+    regexp: 'cluster: default'
+    replace: "cluster: raspberrypi"
+
+- name: Change default user
+  delegate_to: localhost
+  become: false
+  replace:
+    path: "{{ playbook_dir }}/../../output/k3s.yaml"
+    regexp: 'user: default'
+    replace: "user: raspberrypi"
