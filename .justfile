@@ -24,6 +24,12 @@ NC := '\033[0m'
   cd ansible && \
     ansible-playbook playbooks/main.yml --tags destroy
 
+# Deploy home assistant only
+@deploy-home-assistant-only:
+  just _info "Deploying..."
+  cd ansible && \
+    ansible-playbook playbooks/main.yml --tags deploy-homeassistant
+
 # Test k8s connectivity
 @test:
   kubectl top nodes --kubeconfig output/k3s.yaml
