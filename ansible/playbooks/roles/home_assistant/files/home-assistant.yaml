@@ -62,7 +62,7 @@ metadata:
   name: home-assistant-lb
   namespace: home-assistant
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app: home-assistant
   ports:
@@ -70,6 +70,7 @@ spec:
       port: 8123
       targetPort: 8123
       protocol: TCP
+      nodePort: 30080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -81,7 +82,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
 spec:
   rules:
-    - host: homeassistant.local
+    - host: homeassistant.lan
       http:
         paths:
           - path: /

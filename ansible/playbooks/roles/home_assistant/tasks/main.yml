@@ -38,6 +38,13 @@
     sh -c 'cat > /config/configuration.yaml'
   register: append_configuration
 
+- name: Install HACS
+  become: false
+  shell: |
+    kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml exec -it home-assistant-0 \
+      -n home-assistant -- sh -c "wget -qO - https://get.hacs.xyz | bash -"
+
+
 - name: Restart Home Assistant pod to reload configuration
   become: false
   shell: |
