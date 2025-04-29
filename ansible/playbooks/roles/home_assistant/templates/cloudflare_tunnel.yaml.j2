@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflare-operator-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-secrets
+  namespace: cloudflare-operator-system
+stringData:
+  CLOUDFLARE_API_TOKEN: "{{ cf_api_token }}"
+  CLOUDFLARE_API_KEY:   "{{ cf_api_key }}"
+---
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: ClusterTunnel
+metadata:
+  name: k3s-cluster-tunnel
+  namespace: cloudflare-operator-system
+spec:
+  newTunnel:
+    name: home-assistant-k8s-tunnel
+  size: 1
+  cloudflare:
+    email: {{ cf_email }}
+    domain: {{ cf_domain }}
+    secret: cloudflare-secrets
+    accountId: {{ cf_account_id }}
+---
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: TunnelBinding
+metadata:
+  name: homeassistant-cluster-tun
+  namespace: cloudflare-operator-system
+subjects:
+  - kind: Service
+    name: svc01
+    spec:
+      fqdn: {{ ha_fqdn }}
+      protocol: http
+      target: http://home-assistant.home-assistant.svc.cluster.local:8123
+  # - name: svc02  # Points to the second service
+tunnelRef:
+  kind: ClusterTunnel
+  name: k3s-cluster-tunnel
