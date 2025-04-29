@@ -153,3 +153,4 @@
     path: "{{ playbook_dir }}/../../output/k3s.yaml"
     regexp: 'user: default'
     replace: "user: raspberrypi"
+

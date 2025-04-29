@@ -2,3 +2,10 @@ raspberry_ip: "{{ lookup('env', 'RASPBERRY_IP') }}"
 upgrade_cache_valid_time: 3600
 k3s_install_url: https://get.k3s.io
 home_assistant_image: "homeassistant/home-assistant:2025.4"
+cf_tunnel_token: "{{ lookup('env', 'CF_TUNNEL_TOKEN') }}"
+ha_fqdn: "{{ lookup('env', 'HA_FQDN') }}"
+cf_api_key: "{{ lookup('env', 'CF_API_KEY') }}"
+cf_api_token: "{{ lookup('env', 'CF_API_TOKEN') }}"
+cf_email: "{{ lookup('env', 'CF_EMAIL') }}"
+cf_domain: "{{ lookup('env', 'CF_DOMAIN') }}"
+cf_account_id: "{{ lookup('env', 'CF_ACCOUNT_ID') }}"

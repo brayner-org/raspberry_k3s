@@ -1,5 +1,4 @@
 ---
-
 - name: Upgrade OS
   apt:
     update_cache: yes
@@ -10,3 +9,37 @@
   apt:
     name: curl
     state: present
+
+- name: Install python3-pip
+  ansible.builtin.apt:
+    name: python3-pip
+    state: present
+  become: true
+
+- name: Install python3-kubernetes
+  ansible.builtin.apt:
+    name: python3-kubernetes
+    state: present
+  become: true
+
+# Necessary for cloudflare operator
+# https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes
+- name: Set net.core.rmem_max to 7500000
+  ansible.posix.sysctl:
+    name: net.core.rmem_max
+    value: '7500000'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: true
+
+# Necessary for cloudflare operator
+# https://github.com/quic-go/quic-go/wiki/UDP-Buffer-Sizes
+- name: Set net.core.wmem_max to 7500000
+  ansible.posix.sysctl:
+    name: net.core.wmem_max
+    value: '7500000'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  become: true
