@@ -1,5 +1,4 @@
 ---
-
 - name: Check if k3s-uninstall.sh exists
   become: true
   stat:

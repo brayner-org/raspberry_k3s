@@ -36,14 +36,14 @@ spec:
     spec:
       containers:
         - name: home-assistant
-          image: ${HOME_ASSISTANT_IMAGE}
+          image: {{ home_assistant_image }}
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8123
           env:
             - name: TZ
-              value: "America/Recife"
+              value: {{ timezone }}
           volumeMounts:
             - name: config
               mountPath: /config
@@ -62,7 +62,7 @@ metadata:
   name: home-assistant-lb
   namespace: home-assistant
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: home-assistant
   ports:
@@ -70,7 +70,6 @@ spec:
       port: 8123
       targetPort: 8123
       protocol: TCP
-      nodePort: 30080
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -82,7 +81,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
 spec:
   rules:
-    - host: homeassistant.lan
+    - host: {{ ingress_fqdn }}
       http:
         paths:
           - path: /

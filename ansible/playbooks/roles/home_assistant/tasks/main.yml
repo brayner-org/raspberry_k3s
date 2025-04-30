@@ -1,18 +1,14 @@
 ---
-
-- name: Copy Home Assistant manifest to Raspberry Pi
-  become: false
-  copy:
-    src: "{{ role_path }}/files/home-assistant.yaml"
+- name: Copy Home Assistant manifest from template
+  ansible.builtin.template:
+    src: home-assistant.yaml.j2
     dest: /tmp/home-assistant.yaml
-    mode: '0644'
 
-- name: Apply Home Assistant manifests with variable substitution
-  become: false
-  shell: |
-    export HOME_ASSISTANT_IMAGE={{ home_assistant_image }} && \
-    envsubst < /tmp/home-assistant.yaml | kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml apply -f -
-  register: home_assistant_apply
+- name: Apply Home Assistant manifests
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/home-assistant.yaml
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
 
 - name: Wait for Home Assistant StatefulSet to be ready
   become: false
