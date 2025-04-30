@@ -20,18 +20,6 @@
       set_fact:
         env_content: "{{ lookup('file', playbook_dir ~ '/../../.env') }}"
 
-    - name: Extract PRIVATE_KEY_B64 from .env (control node)
-      delegate_to: localhost
-      run_once: true
-      become: false
-      set_fact:
-        private_key_b64: >-
-          {{ env_content.splitlines()
-             | select('match','^PRIVATE_KEY_B64=')
-             | map('regex_replace','^PRIVATE_KEY_B64=','')
-             | list
-             | first }}
-
     - name: Write SSH private key to disk (control node)
       delegate_to: localhost
       run_once: true

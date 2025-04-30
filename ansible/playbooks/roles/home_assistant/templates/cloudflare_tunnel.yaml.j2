@@ -36,7 +36,7 @@ subjects:
   - kind: Service
     name: svc01
     spec:
-      fqdn: {{ ha_fqdn }}
+      fqdn: {{ cf_fqdn }}
       protocol: http
       target: http://home-assistant.home-assistant.svc.cluster.local:8123
   # - name: svc02  # Points to the second service

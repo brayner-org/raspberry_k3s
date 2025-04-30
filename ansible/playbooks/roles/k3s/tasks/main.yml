@@ -1,5 +1,4 @@
 ---
-
 - name: Overwrite cgroup settings
   become: true
   copy:
@@ -39,7 +38,7 @@
   command: swapoff -a
   register: swapoff_result
 
-- name: Install k3s
+- name: Install k3s without traefik
   shell: |
     sudo curl -sfL https://get.k3s.io \
       | INSTALL_K3S_EXEC="--disable traefik" sh -s - --write-kubeconfig-mode 644
@@ -137,6 +136,14 @@
     path: "{{ playbook_dir }}/../../output/k3s.yaml"
     regexp: 'name: default'
     replace: "name: raspberrypi"
+
+- name: Change default context
+  delegate_to: localhost
+  become: false
+  replace:
+    path: "{{ playbook_dir }}/../../output/k3s.yaml"
+    regexp: 'current-context: default'
+    replace: "current-context: raspberrypi"
 
 - name: Change default cluster name from context
   delegate_to: localhost
