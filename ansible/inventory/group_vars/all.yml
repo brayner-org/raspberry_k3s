@@ -1,7 +1,7 @@
 raspberry_ip: "{{ lookup('env', 'RASPBERRY_IP') }}"
 upgrade_cache_valid_time: 3600
 k3s_install_url: https://get.k3s.io
-home_assistant_image: "homeassistant/home-assistant:2025.4"
+home_assistant_image: "homeassistant/home-assistant:2025.5.0b3"
 private_key_b64: "{{ lookup('env', 'PRIVATE_KEY_B64') }}"
 ingress_fqdn: "{{ lookup('env', 'INGRESS_FQDN') }}"
 timezone: "{{ lookup('env', 'TIMEZONE') }}"
