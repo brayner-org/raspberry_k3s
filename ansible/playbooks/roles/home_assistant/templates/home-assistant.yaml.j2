@@ -34,6 +34,8 @@ spec:
       labels:
         app: home-assistant
     spec:
+      securityContext:
+        fsGroup: 0
       containers:
         - name: home-assistant
           image: {{ home_assistant_image }}
@@ -47,6 +49,15 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+            - name: zigbee
+              mountPath: /dev/ttyUSB0
+          securityContext:
+            privileged: true
+      volumes:
+        - name: zigbee
+          hostPath:
+            path: /dev/ttyUSB0
+            type: CharDevice
   volumeClaimTemplates:
     - metadata:
         name: config
