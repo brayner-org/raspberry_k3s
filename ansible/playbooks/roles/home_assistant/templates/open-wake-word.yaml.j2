@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openwakeword
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openwakeword-data
+  namespace: openwakeword
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: openwakeword-custom
+  namespace: openwakeword
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openwakeword
+  namespace: openwakeword
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openwakeword
+  template:
+    metadata:
+      labels:
+        app: openwakeword
+    spec:
+      containers:
+        - name: openwakeword
+          image: rhasspy/wyoming-openwakeword
+          command: ["--preload-model", "ok_nabu", "--custom-model-dir", "/custom"]
+          env:
+            - name: TZ
+              value: {{ timezone }}
+          ports:
+            - containerPort: 10400
+              protocol: TCP
+            - containerPort: 10400
+              protocol: UDP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: custom
+              mountPath: /custom
+            - name: timezone
+              mountPath: /etc/timezone
+              readOnly: true
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: openwakeword-data
+        - name: custom
+          persistentVolumeClaim:
+            claimName: openwakeword-custom
+        - name: timezone
+          hostPath:
+            path: /etc/timezone
+            type: File
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+            type: File
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openwakeword
+  namespace: openwakeword
+spec:
+  selector:
+    app: openwakeword
+  ports:
+    - name: tcp-10400
+      port: 10400
+      targetPort: 10400
+      protocol: TCP
+    - name: udp-10400
+      port: 10400
+      targetPort: 10400
+      protocol: UDP
+  type: ClusterIP
