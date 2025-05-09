@@ -55,6 +55,30 @@ spec:
               mountPath: /dev/ttyUSB0
           securityContext:
             privileged: true
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "3Gi"
+            limits:
+              memory: "4Gi"
+          livenessProbe:
+            tcpSocket:
+              host: "127.0.0.1"
+              port: 8123
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              host: "127.0.0.1"
+              port: 8123
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
       volumes:
         - name: zigbee
           hostPath:
