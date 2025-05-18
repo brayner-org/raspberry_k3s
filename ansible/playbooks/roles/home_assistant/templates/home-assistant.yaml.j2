@@ -38,6 +38,22 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       securityContext:
         fsGroup: 0
+      initContainers:
+        - name: fix-config-perms
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              chown -R root:root /config
+              find /config -type d -exec chmod 755 {} +
+              # Allow group write permission to vscode server
+              find /config -type f -exec chmod 664 {} +
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: config
+              mountPath: /config
       containers:
         - name: home-assistant
           image: {{ home_assistant_image }}
