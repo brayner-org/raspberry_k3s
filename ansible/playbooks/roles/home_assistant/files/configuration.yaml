@@ -16,3 +16,13 @@ http:
     - 10.42.0.0/16
   ip_ban_enabled: true
   login_attempts_threshold: 5
+
+# https://github.com/lovelylain/hass_ingress
+ingress:
+  vscode:
+    require_admin: true
+    title: File Editor
+    icon: mdi:microsoft-visual-studio-code
+    url: http://code-server.home-assistant:8080
+    headers:
+      authorization: !secret vscode_password

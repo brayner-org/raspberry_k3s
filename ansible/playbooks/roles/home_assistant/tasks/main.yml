@@ -19,6 +19,11 @@
   delay: 15
   until: home_assistant_rollout.rc == 0
 
+- name: Copy secrets file
+  ansible.builtin.template:
+    src: secrets.yaml.j2
+    dest: /tmp/secrets.yaml
+
 - name: Copy Home Assistant configuration block to Raspberry Pi
   become: false
   copy:
@@ -26,13 +31,15 @@
     dest: /tmp/configuration.yaml
     mode: '0644'
 
-- name: Append configuration block to configuration.yaml inside Home Assistant pod
+- name: Add configurations inside Home Assistant pod
   become: false
   shell: |
     sleep 20
     cat /tmp/configuration.yaml | kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml exec -i -n home-assistant statefulset/home-assistant -- \
     sh -c 'cat > /config/configuration.yaml'
-  register: append_configuration
+    cat /tmp/secrets.yaml | kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml exec -i -n home-assistant statefulset/home-assistant -- \
+    sh -c 'cat > /config/secrets.yaml'
+  register: add_configuration
 
 - name: Install HACS
   become: false
@@ -61,3 +68,24 @@
   shell: |
     kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml rollout restart statefulset/home-assistant -n home-assistant
   register: restart_home_assistant
+
+- name: Copy vscode manifest from template
+  ansible.builtin.template:
+    src: vscode.yaml.j2
+    dest: /tmp/vscode.yaml
+
+- name: Apply vscode manifests
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/vscode.yaml
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for vscode StatefulSet to be ready
+  become: false
+  shell: |
+    kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml rollout status statefulset/code-server -n home-assistant
+  register: code_server_rollout
+  retries: 10
+  delay: 15
+  until: code_server_rollout.rc == 0
+
