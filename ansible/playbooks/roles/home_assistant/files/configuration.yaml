@@ -26,3 +26,7 @@ ingress:
     url: http://code-server.home-assistant:8080
     headers:
       authorization: !secret vscode_password
+  music_assistant:
+    title: Music Assistant
+    icon: mdi:music
+    url: http://music-assistant.music-assistant:8095

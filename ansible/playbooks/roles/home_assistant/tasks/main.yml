@@ -89,3 +89,22 @@
   delay: 15
   until: code_server_rollout.rc == 0
 
+- name: Copy Music Assistant manifest from template
+  ansible.builtin.template:
+    src: music-assistant.yaml.j2
+    dest: /tmp/music-assistant.yaml
+
+- name: Apply Music Assistant manifests
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/music-assistant.yaml
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Music Assistant StatefulSet to be ready
+  become: false
+  shell: |
+    kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml rollout status statefulset/home-assistant -n home-assistant
+  register: music_assistant_rollout
+  retries: 10
+  delay: 15
+  until: music_assistant_rollout.rc == 0
