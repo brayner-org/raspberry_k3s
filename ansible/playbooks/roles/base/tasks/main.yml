@@ -45,3 +45,23 @@
     state: present
     reload: yes
   become: true
+
+- name: Create symlink for k3s kubeconfig
+  ansible.builtin.file:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /root/.kube/config
+    state: link
+
+- name: Install k9s via official Debian package
+  ansible.builtin.shell: |
+    wget https://github.com/derailed/k9s/releases/download/v0.50.6/k9s_linux_arm64.deb -O /tmp/k9s_linux_arm64.deb
+    apt install -y /tmp/k9s_linux_arm64.deb
+    rm /tmp/k9s_linux_arm64.deb
+  args:
+    executable: /bin/bash
+  become: true
+
+- name: Install kubectx
+  ansible.builtin.package:
+    name: kubectx
+    state: present
