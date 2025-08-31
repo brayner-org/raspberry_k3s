@@ -1,0 +1,133 @@
+---
+- name: Add Velero Helm repository
+  kubernetes.core.helm_repository:
+    name: vmware-tanzu
+    repo_url: https://vmware-tanzu.github.io/helm-charts
+    state: present
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Create velero namespace
+  kubernetes.core.k8s:
+    name: velero
+    api_version: v1
+    kind: Namespace
+    state: present
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Create AWS credentials secret
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: cloud-credentials
+        namespace: velero
+      type: Opaque
+      stringData:
+        cloud: |
+          [default]
+          aws_access_key_id={{ aws_access_key_id }}
+          aws_secret_access_key={{ aws_secret_access_key }}
+    state: present
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Check if Velero is already installed
+  kubernetes.core.helm_info:
+    name: velero
+    release_namespace: velero
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  register: velero_installed
+  ignore_errors: true
+
+- name: Deploy Velero using Helm
+  kubernetes.core.helm:
+    name: velero
+    chart_ref: vmware-tanzu/velero
+    release_namespace: velero
+    create_namespace: true
+    values:
+      initContainers:
+        - name: velero-plugin-for-aws
+          image: velero/velero-plugin-for-aws:v1.10.0
+          volumeMounts:
+            - mountPath: /target
+              name: plugins
+        - name: velero-plugin-for-csi
+          image: velero/velero-plugin-for-csi:v0.7.0
+          volumeMounts:
+            - mountPath: /target
+              name: plugins
+      configuration:
+        backupStorageLocation:
+          - name: default
+            provider: aws
+            bucket: "{{ velero_bucket_name }}"
+            default: true
+            config:
+              region: "{{ aws_region }}"
+        defaultVolumesToFsBackup: true  # Use file system backup for all PVCs by default
+        defaultBackupTTL: "360h"  # 15 days default retention
+        features: EnableCSI  # Enable CSI snapshot support
+      credentials:
+        existingSecret: cloud-credentials
+      deployNodeAgent: true
+      nodeAgent:
+        podVolumePath: /var/lib/kubelet/pods
+        privileged: true
+      upgradeCRDs: true
+    state: present
+    wait: true
+    wait_timeout: 600s
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  when: velero_installed is failed
+
+- name: Wait for Velero deployment to be ready
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: velero
+    namespace: velero
+    wait: true
+    wait_condition:
+      type: Progressing
+      status: "True"
+    wait_timeout: 300
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Ensure BackupStorageLocation is configured
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: velero.io/v1
+      kind: BackupStorageLocation
+      metadata:
+        name: default
+        namespace: velero
+      spec:
+        provider: aws
+        default: true
+        objectStorage:
+          bucket: "{{ velero_bucket_name }}"
+        config:
+          region: "{{ aws_region }}"
+    state: present
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Create backup schedule for home-assistant namespace
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: velero.io/v1
+      kind: Schedule
+      metadata:
+        name: home-assistant-daily-backup
+        namespace: velero
+      spec:
+        schedule: "0 2 * * *"  # Daily at 2 AM
+        template:
+          includedNamespaces:
+            - home-assistant
+          ttl: 360h  # 15 days retention
+          storageLocation: default
+          defaultVolumesToFsBackup: true  # Ensure PVC backups
+          includeClusterResources: false  # Only backup namespace resources
+    state: present
+    kubeconfig: /etc/rancher/k3s/k3s.yaml

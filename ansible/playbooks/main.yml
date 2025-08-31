@@ -33,4 +33,5 @@
     - { role: base, tags: deploy }
     - { role: k3s, tags: deploy }
     - { role: home_assistant, tags: [deploy, deploy-homeassistant] }
+    - { role: velero, tags: [deploy, deploy-velero] }
     - { role: destroy, tags: destroy }

@@ -30,6 +30,12 @@ NC := '\033[0m'
   cd ansible && \
     ansible-playbook playbooks/main.yml --tags deploy-homeassistant
 
+# Deploy Velero backup solution
+@deploy-velero:
+  just _info "Deploying Velero..."
+  cd ansible && \
+    ansible-playbook playbooks/main.yml --tags deploy-velero
+
 # Test k8s connectivity
 @test:
   kubectl top nodes --kubeconfig output/k3s.yaml
