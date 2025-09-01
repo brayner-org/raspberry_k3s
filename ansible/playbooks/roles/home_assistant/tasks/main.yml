@@ -47,6 +47,28 @@
     kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml exec -it home-assistant-0 \
       -n home-assistant -- sh -c "wget -qO - https://get.hacs.xyz | bash -"
 
+
+
+
+
+
+
+- name: Copy openwakeword manifest from template
+  ansible.builtin.template:
+    src: open-wake-word.yaml.j2
+    dest: /tmp/open-wake-word.yaml
+
+- name: Apply openwakeword manifests
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/open-wake-word.yaml
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+
+
+
+
+
 - name: Install Cloudflare Operator
   become: false
   shell: |
